@@ -20,7 +20,7 @@ public class CorsConfig {
             public void addCorsMappings(CorsRegistry registry) {
                 registry
                         .addMapping("/**")
-                        .allowedOrigins("http://localhost:3000", "https://miappfrontend.com") // Limitar los orígenes
+                        .allowedOrigins("http://localhost:5173") // Limitar los orígenes
                         .allowedMethods("GET", "POST", "PUT", "DELETE") // Métodos más específicos
                         .allowedHeaders("Authorization", "Content-Type") // Solo los encabezados que necesitas
                         .allowCredentials(true); // Permite el envío de cookies (si necesario)
