@@ -16,9 +16,8 @@ export const authApi = axios.create({
 export const login = async (credenciales: {
   email: string;
   password: string;
-}): Promise<ReqRes> => {
-  const response = await authApi.post<ReqRes>("/login", credenciales);
-  return response.data;
+}) => {
+  return await authApi.post<ReqRes>("/login", credenciales);
 };
 export const register = async (userData: {
   name: string;
