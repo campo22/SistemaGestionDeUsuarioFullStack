@@ -1,5 +1,5 @@
 import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { login } from "../../api/auth";
+import { login, register } from "../../api/auth";
 import { ReqRes } from "./types";
 
 interface AuthState {
@@ -37,6 +37,31 @@ export const loginUser = createAsyncThunk(
   }
 );
 
+export const registerUser = createAsyncThunk(
+  "auth/register",
+  async (
+    userData: {
+      name: string;
+      email: string;
+      password: string;
+      city: string;
+    },
+    { rejectWithValue }
+  ) => {
+    try {
+      const response = await register(userData);
+
+      if (response.error) {
+        return rejectWithValue(response.error); // 👈 manejar error explícito
+      }
+
+      return response;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.error || "Registro fallido");
+    }
+  }
+);
+
 const authSlice = createSlice({
   name: "auth",
   initialState,
@@ -64,6 +89,17 @@ const authSlice = createSlice({
         }
       })
       .addCase(loginUser.rejected, (state, action) => {
+        state.status = "failed";
+        state.error = action.payload as string;
+      })
+      .addCase(registerUser.pending, (state) => {
+        state.status = "loading";
+        state.error = null;
+      })
+      .addCase(registerUser.fulfilled, (state) => {
+        state.status = "succeeded";
+      })
+      .addCase(registerUser.rejected, (state, action) => {
         state.status = "failed";
         state.error = action.payload as string;
       });

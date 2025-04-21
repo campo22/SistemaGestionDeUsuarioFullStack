@@ -24,8 +24,12 @@ export const register = async (userData: {
   email: string;
   password: string;
   city: string;
-  role: string;
 }): Promise<ReqRes> => {
   const response = await authApi.post<ReqRes>("/register", userData);
+  return response.data;
+};
+
+export const refreshToken = async (token: string): Promise<ReqRes> => {
+  const response = await authApi.post<ReqRes>("/refresh-token", { token });
   return response.data;
 };

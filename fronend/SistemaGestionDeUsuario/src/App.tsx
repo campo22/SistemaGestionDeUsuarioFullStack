@@ -4,8 +4,9 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 // Tus componentes
-import { Login } from './pages/Login';
+import { Login } from './components/Login';
 import { Dashboard } from './pages/Dashboard';
+import RegisterForm from './components/RegisterForm';
 // otros imports...
 
 function App() {
@@ -13,7 +14,8 @@ function App() {
     <Router>
       {/* Tu estructura de rutas */}
       <Routes>
-        <Route path="/" element={<Login />} />
+        <Route path="/" element={<RegisterForm />} />
+        <Route path="/login" element={<Login />} />
         <Route path="/dashboard" element={<Dashboard />} />
         {/* Más rutas si tienes */}
       </Routes>

@@ -40,7 +40,7 @@ public class UserManagementService {
 
             // Mapeo de los datos del request al modelo OurUsers
             OurUsers userToSave = mapToUser(registrationRequest);
-            userToSave.setRole(registrationRequest.getRole());
+            userToSave.setRole("USER");
 
             // Guardar usuario en la base de datos
             OurUsers savedUser = usersRepository.save(userToSave);
