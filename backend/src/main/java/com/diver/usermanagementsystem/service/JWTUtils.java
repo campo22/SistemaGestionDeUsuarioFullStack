@@ -20,7 +20,14 @@ import java.util.function.Function;
 public class JWTUtils {
 
     private SecretKey Key;
-    private static final long EXPIRATION_TIME = 86400000;  // Tiempo de expiración en milisegundos (24 horas)
+
+    // Access token: 1 hora (por ejemplo)
+    private static final long ACCESS_EXPIRATION_TIME = 1000 * 60 * 60;
+
+    // Refresh token: 7 días
+    private static final long REFRESH_EXPIRATION_TIME = 1000 * 60 * 60 * 24 * 7;
+
+
 
     /**
      * Constructor que inicializa la clave secreta usada para firmar los JWTs.
@@ -47,7 +54,7 @@ public class JWTUtils {
             return Jwts.builder()
                     .subject(userDetails.getUsername())
                     .issuedAt(new Date(System.currentTimeMillis())) // Fecha de emisión del token
-                    .expiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME)) // Fecha de expiración (24 horas)
+                    .expiration(new Date(System.currentTimeMillis() + ACCESS_EXPIRATION_TIME))//el currentTimeMillis() + 1000 * 60 * 60)) // Fecha de expiración del token
                     .signWith(Key) // Firma con la clave secreta
                     .compact(); // Compone el token JWT
         } catch (Exception e) {
@@ -68,7 +75,7 @@ public class JWTUtils {
                     .claims(claims) // Incluye los reclamos adicionales
                     .subject(userDetails.getUsername())
                     .issuedAt(new Date(System.currentTimeMillis()))
-                    .expiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
+                    .expiration(new Date(System.currentTimeMillis() + REFRESH_EXPIRATION_TIME))
                     .signWith(Key)
                     .compact();
         } catch (Exception e) {

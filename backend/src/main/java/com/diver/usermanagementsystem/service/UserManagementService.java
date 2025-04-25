@@ -79,7 +79,7 @@ public class UserManagementService {
                 rep.setMessage("Usuario autenticado con éxito");
                 rep.setToken(token);
                 rep.setRefreshToken(refreshToken);
-                rep.setExpirationToken("24h");
+                rep.setExpirationToken("1h");
 
                 return rep;
             } else {
@@ -99,21 +99,20 @@ public class UserManagementService {
     public ReqRes refreshToken(ReqRes refresh) {
         ReqRes res = new ReqRes();
         try {
-            // Extrae el email del token
-            String email = jwtUtils.extractUsername(refresh.getToken());
+            // Validamos con el refreshToken, NO con el accessToken
+            String email = jwtUtils.extractUsername(refresh.getRefreshToken());
             OurUsers user = usersRepository.findByEmail(email).orElseThrow();
 
-            if (jwtUtils.isTokenValid(refresh.getToken(), user)) {
-                // Genera nuevo token
+            if (jwtUtils.isTokenValid(refresh.getRefreshToken(), user)) {
                 String jwt = jwtUtils.generateToken(user);
 
                 res.setStatus(200);
                 res.setToken(jwt);
-                res.setRefreshToken(refresh.getToken());
-                res.setExpirationToken("24h");
+                res.setRefreshToken(refresh.getRefreshToken());
+                res.setExpirationToken("1h"); // o lo que definas
                 res.setMessage("Token refrescado con éxito");
             } else {
-                return errorResponse(401, "Token inválido o expirado");
+                return errorResponse(401, "Refresh token inválido o expirado");
             }
 
         } catch (Exception e) {
@@ -121,6 +120,7 @@ public class UserManagementService {
         }
         return res;
     }
+
 
     /**
      * Obtiene todos los usuarios

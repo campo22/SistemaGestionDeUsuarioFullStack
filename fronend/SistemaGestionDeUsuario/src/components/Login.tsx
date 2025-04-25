@@ -9,28 +9,25 @@ export const Login = () => {
     const { email, setEmail, password, setPassword, formErrors, validate, reset } = useLoginForm();
     const dispatch = useAppDispatch();
     const navigate = useNavigate();
-    const { status, error } = useAppSelector((state) => state.auth);
+    const { status, error: reduxError } = useAppSelector((state) => state.auth);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!validate()) return;
+
+        if (!validate()) {
+            toast.error('Completa los campos correctamente');
+            return;
+        }
 
         try {
-            const result = await dispatch(loginUser({ email, password }));
-            if (loginUser.fulfilled.match(result)) {
-                toast.success('Inicio de sesión exitoso');
-                navigate('/dashboard');
-            } else {
-                const errorMsg =
-                    typeof result.payload === 'string' && result.payload.trim() !== ''
-                        ? result.payload
-                        : 'Error de autenticación';
-                toast.error(errorMsg);
-                reset();
-            }
-        } catch (err) {
-            toast.error('Ocurrió un error inesperado');
-            console.error('Error inesperado:', err);
+            // Usar unwrap() para manejar el rechazo del thunk
+            await dispatch(loginUser({ email, password })).unwrap();
+            toast.success('¡Inicio de sesión exitoso!');
+            navigate('/dashboard');
+        } catch (error: any) {
+            // Mostrar el mensaje de error del backend o uno genérico
+            toast.error(error || 'Error de autenticación');
+            reset();
         }
     };
 
@@ -38,15 +35,17 @@ export const Login = () => {
         <div className="max-w-md mx-auto mt-10 p-6 bg-white rounded-lg shadow-md">
             <h2 className="text-2xl font-bold mb-6 text-center">Login</h2>
 
-            {/* {error && (
+            {/* Muestra el error del estado de Redux */}
+            {reduxError && (
                 <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-800 rounded">
-                    {error === 'Unauthorized'
-                        ? 'Credenciales incorrectas. Verifica tu email y contraseña.'
-                        : error}
+                    {reduxError === 'Unauthorized'
+                        ? 'Credenciales incorrectas'
+                        : reduxError}
                 </div>
-            )} */}
+            )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
+                {/* Campos de email y password */}
                 <div>
                     <input
                         type="email"
