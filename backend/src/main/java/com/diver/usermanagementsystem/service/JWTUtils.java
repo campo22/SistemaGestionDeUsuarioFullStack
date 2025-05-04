@@ -21,8 +21,8 @@ public class JWTUtils {
 
     private SecretKey Key;
 
-    // Access token: 1 hora (por ejemplo)
-    private static final long ACCESS_EXPIRATION_TIME = 1000 * 60 * 60;
+    // Token de acceso: 1 minuto
+    private static final long ACCESS_EXPIRATION_TIME = 1000 * 60 ; 
 
     // Refresh token: 7 días
     private static final long REFRESH_EXPIRATION_TIME = 1000 * 60 * 60 * 24 * 7;

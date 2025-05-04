@@ -1,7 +1,7 @@
 import React from 'react';
-import { useAppDispatch, useAppSelector } from '../app/hooks';
+import { useAppDispatch, useAppSelector } from '../../../app/hooks';
 import { useNavigate } from 'react-router-dom';
-import { loginUser } from '../features/auth/authSlice';
+import { loginUser } from '../authSlice';
 import { toast } from 'react-toastify';
 import { useLoginForm } from '../hooks/useLoginForm';
 
@@ -83,3 +83,4 @@ export const Login = () => {
         </div>
     );
 };
+

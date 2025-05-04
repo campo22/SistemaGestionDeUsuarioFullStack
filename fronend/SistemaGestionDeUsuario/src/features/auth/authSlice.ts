@@ -1,6 +1,7 @@
-import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { login, register, refreshToken } from "../../api/auth";
+import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
+
 import { ReqRes } from "./types";
+import { login, refreshToken, register } from "./services/ authService";
 
 interface AuthState {
   user: ReqRes["ourUsers"] | null;
@@ -61,14 +62,19 @@ export const registerUser = createAsyncThunk(
 
 export const refreshTokenThunk = createAsyncThunk(
   "auth/refreshToken",
-  async (_, { rejectWithValue }) => {
+  async (refreshTokenArg: string, { rejectWithValue }) => {
     try {
-      const data = await refreshToken();
-      localStorage.setItem("token", data.token || "");
-      if (data.refreshToken) {
-        localStorage.setItem("refreshToken", data.refreshToken);
+      const response = await refreshToken(refreshTokenArg);
+      localStorage.setItem("token", response.token || "");
+      if (!response.token) {
+        return rejectWithValue("No hay refresh token disponible");
       }
-      return data;
+
+      localStorage.setItem("token", response.token || "");
+      if (response.refreshToken) {
+        localStorage.setItem("refreshToken", response.refreshToken);
+      }
+      return response;
     } catch (error: any) {
       localStorage.removeItem("token");
       localStorage.removeItem("refreshToken");

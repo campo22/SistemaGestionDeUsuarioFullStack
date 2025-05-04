@@ -1,11 +1,12 @@
-import { useDispatch } from "react-redux"
 
-import { AppDispatch } from "../app/store"
-import { useAppDispatch, useAppSelector } from "../app/hooks";
+
+
 import { useState } from "react";
-import { registerUser } from "../features/auth/authSlice";
+
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import { useAppDispatch, useAppSelector } from "../../../app/hooks";
+import { registerUser } from "../authSlice";
 
 
 const RegisterForm = () => {

@@ -4,15 +4,18 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 // Tus componentes
-import { Login } from './components/Login';
+import { Login } from './features/auth/components/Login';
 import { Dashboard } from './pages/Dashboard';
-import RegisterForm from './components/RegisterForm';
+
+import TestRefresh from './components/TestRefresh';
+import RegisterForm from './features/auth/components/RegisterForm';
 // otros imports...
 
 function App() {
   return (
     <Router>
       {/* Tu estructura de rutas */}
+      <TestRefresh />
       <Routes>
         <Route path="/" element={<RegisterForm />} />
         <Route path="/login" element={<Login />} />
