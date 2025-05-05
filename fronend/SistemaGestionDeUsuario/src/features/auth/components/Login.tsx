@@ -1,85 +1,98 @@
-import React from 'react';
+import { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../../app/hooks';
-import { useNavigate } from 'react-router-dom';
 import { loginUser } from '../authSlice';
 import { toast } from 'react-toastify';
-import { useLoginForm } from '../hooks/useLoginForm';
 
 export const Login = () => {
-    const { email, setEmail, password, setPassword, formErrors, validate, reset } = useLoginForm();
-    const dispatch = useAppDispatch();
     const navigate = useNavigate();
-    const { status, error: reduxError } = useAppSelector((state) => state.auth);
+    const dispatch = useAppDispatch();
+    const { status } = useAppSelector(state => state.auth);
+
+    const [credentials, setCredentials] = useState({
+        email: '',
+        password: ''
+    });
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setCredentials({
+            ...credentials,
+            [e.target.name]: e.target.value
+        });
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (!validate()) {
-            toast.error('Completa los campos correctamente');
-            return;
-        }
-
         try {
-            // Usar unwrap() para manejar el rechazo del thunk
-            await dispatch(loginUser({ email, password })).unwrap();
-            toast.success('¡Inicio de sesión exitoso!');
+            await dispatch(loginUser(credentials)).unwrap();
+            toast.success('Inicio de sesión exitoso');
             navigate('/dashboard');
         } catch (error: any) {
-            // Mostrar el mensaje de error del backend o uno genérico
-            toast.error(error || 'Error de autenticación');
-            reset();
+            toast.error(error.message || 'Error al iniciar sesión');
         }
     };
 
     return (
-        <div className="max-w-md mx-auto mt-10 p-6 bg-white rounded-lg shadow-md">
-            <h2 className="text-2xl font-bold mb-6 text-center">Login</h2>
-
-            {/* Muestra el error del estado de Redux */}
-            {reduxError && (
-                <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-800 rounded">
-                    {reduxError === 'Unauthorized'
-                        ? 'Credenciales incorrectas'
-                        : reduxError}
-                </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-                {/* Campos de email y password */}
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+            <div className="max-w-md w-full space-y-8">
                 <div>
-                    <input
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Email"
-                    />
-                    {formErrors.email && (
-                        <p className="text-sm text-red-600 mt-1">{formErrors.email}</p>
-                    )}
+                    <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+                        Iniciar Sesión
+                    </h2>
                 </div>
 
-                <div>
-                    <input
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Password"
-                    />
-                    {formErrors.password && (
-                        <p className="text-sm text-red-600 mt-1">{formErrors.password}</p>
-                    )}
-                </div>
+                <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+                    <div className="rounded-md shadow-sm -space-y-px">
+                        <div>
+                            <label htmlFor="email" className="sr-only">Email</label>
+                            <input
+                                id="email"
+                                name="email"
+                                type="email"
+                                required
+                                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                                placeholder="Email"
+                                value={credentials.email}
+                                onChange={handleChange}
+                            />
+                        </div>
+                        <div>
+                            <label htmlFor="password" className="sr-only">Contraseña</label>
+                            <input
+                                id="password"
+                                name="password"
+                                type="password"
+                                required
+                                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                                placeholder="Contraseña"
+                                value={credentials.password}
+                                onChange={handleChange}
+                            />
+                        </div>
+                    </div>
 
-                <button
-                    type="submit"
-                    disabled={status === 'loading'}
-                    className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600 disabled:bg-gray-400"
-                >
-                    {status === 'loading' ? 'Iniciando sesión...' : 'Login'}
-                </button>
-            </form>
+
+                    <div>
+                        <button
+                            type="submit"
+                            disabled={status === 'loading'}
+                            className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                        >
+                            {status === 'loading' ? 'Iniciando sesión...' : 'Iniciar Sesión'}
+                        </button>
+                    </div>
+
+                    <div className="text-sm text-center">
+                        <p>
+                            ¿No tienes una cuenta?{' '}
+                            <Link to="/" className="font-medium text-blue-600 hover:text-blue-500">
+                                Regístrate
+                            </Link>
+                        </p>
+                    </div>
+                </form>
+            </div>
         </div>
     );
 };

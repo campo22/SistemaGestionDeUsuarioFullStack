@@ -1,43 +1,37 @@
-import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
-
+import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { ReqRes } from "./types";
-import { login, refreshToken, register } from "./services/ authService";
+import authService from "./services/authService";
 
 interface AuthState {
   user: ReqRes["ourUsers"] | null;
-  refreshToken: string | null;
-  tokenExpiration: number | null;
   token: string | null;
+  refreshToken: string | null;
+  isAuthenticated: boolean;
   status: "idle" | "loading" | "succeeded" | "failed";
   error: string | null;
 }
 
 const initialState: AuthState = {
   user: null,
-  token: null,
-  refreshToken: null,
-  tokenExpiration: null,
+  token: localStorage.getItem("token"),
+  refreshToken: localStorage.getItem("refreshToken"),
+  isAuthenticated: !!localStorage.getItem("token"),
   status: "idle",
   error: null,
 };
 
 // authSlice.ts
+// Thunks
 export const loginUser = createAsyncThunk(
   "auth/login",
   async (
     credentials: { email: string; password: string },
-    { rejectWithValue }
+    { rejectWithValue, dispatch }
   ) => {
     try {
-      const response = await login(credentials);
-
-      if (response.error) {
-        return rejectWithValue(response.error); // 👈 manejar error explícito
-      }
-
-      localStorage.setItem("token", response.token || "");
-      localStorage.setItem("refreshToken", response.refreshToken || "");
-
+      const response = await authService.login(credentials);
+      // After login, get user profile
+      dispatch(getUserProfile());
       return response;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.error || "Login fallido");
@@ -52,10 +46,11 @@ export const registerUser = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-      const data = await register(userData);
-      return data;
+      return await authService.register(userData);
     } catch (error: any) {
-      return rejectWithValue(error.message || "Error en el registro");
+      return rejectWithValue(
+        error.response?.data?.error || "Error en el registro"
+      );
     }
   }
 );
@@ -64,36 +59,74 @@ export const refreshTokenThunk = createAsyncThunk(
   "auth/refreshToken",
   async (refreshTokenArg: string, { rejectWithValue }) => {
     try {
-      const response = await refreshToken(refreshTokenArg);
-      localStorage.setItem("token", response.token || "");
+      const response = await authService.refreshToken(refreshTokenArg);
+
       if (!response.token) {
         return rejectWithValue("No hay refresh token disponible");
       }
 
-      localStorage.setItem("token", response.token || "");
-      if (response.refreshToken) {
-        localStorage.setItem("refreshToken", response.refreshToken);
-      }
       return response;
     } catch (error: any) {
-      localStorage.removeItem("token");
-      localStorage.removeItem("refreshToken");
-      return rejectWithValue(error.message || "Error al refrescar sesión");
+      return rejectWithValue(
+        error.response?.data?.error || "Error al refrescar sesión"
+      );
     }
   }
 );
+
+export const getUserProfile = createAsyncThunk(
+  "auth/getUserProfile",
+  async (_, { rejectWithValue }) => {
+    try {
+      return await authService.getUserProfile();
+    } catch (error: any) {
+      return rejectWithValue(
+        error.response?.data?.error || "Error al obtener perfil de usuario"
+      );
+    }
+  }
+);
+
+export const logoutUser = createAsyncThunk("auth/logout", async () => {
+  await authService.logout();
+});
 
 const authSlice = createSlice({
   name: "auth",
   initialState,
   reducers: {
+    loginSuccess: (
+      state,
+      action: PayloadAction<{
+        token: string;
+        refreshToken?: string;
+        user?: ReqRes["ourUsers"];
+      }>
+    ) => {
+      state.token = action.payload.token;
+      state.refreshToken = action.payload.refreshToken || null;
+      state.user = action.payload.user || null;
+      state.status = "succeeded";
+      state.error = null;
+
+      // Store tokens in localStorage
+      localStorage.setItem("token", action.payload.token);
+      if (action.payload.refreshToken) {
+        localStorage.setItem("refreshToken", action.payload.refreshToken);
+      }
+    },
     logout: (state) => {
       state.user = null;
       state.token = null;
       state.refreshToken = null;
-      state.tokenExpiration = null;
+      state.isAuthenticated = false;
+
+      // Clear localStorage
       localStorage.removeItem("token");
       localStorage.removeItem("refreshToken");
+    },
+    clearAuthError: (state) => {
+      state.error = null;
     },
   },
   extraReducers: (builder) => {
@@ -108,6 +141,16 @@ const authSlice = createSlice({
         state.user = action.payload.ourUsers || null;
         state.token = action.payload.token || null;
         state.refreshToken = action.payload.refreshToken || null;
+        state.isAuthenticated = true;
+        state.error = null;
+
+        // Store tokens in localStorage
+        if (action.payload.token) {
+          localStorage.setItem("token", action.payload.token);
+        }
+        if (action.payload.refreshToken) {
+          localStorage.setItem("refreshToken", action.payload.refreshToken);
+        }
       })
       .addCase(loginUser.rejected, (state, action) => {
         state.status = "failed";
@@ -121,6 +164,7 @@ const authSlice = createSlice({
       })
       .addCase(registerUser.fulfilled, (state) => {
         state.status = "succeeded";
+        state.error = null;
       })
       .addCase(registerUser.rejected, (state, action) => {
         state.status = "failed";
@@ -137,6 +181,15 @@ const authSlice = createSlice({
         state.token = action.payload.token || null;
         state.refreshToken = action.payload.refreshToken || null;
         state.user = action.payload.ourUsers || null;
+        state.error = null;
+
+        // Store tokens in localStorage
+        if (action.payload.token) {
+          localStorage.setItem("token", action.payload.token);
+        }
+        if (action.payload.refreshToken) {
+          localStorage.setItem("refreshToken", action.payload.refreshToken);
+        }
       })
       .addCase(refreshTokenThunk.rejected, (state, action) => {
         state.status = "failed";
@@ -144,9 +197,48 @@ const authSlice = createSlice({
         state.user = null;
         state.token = null;
         state.refreshToken = null;
+        state.isAuthenticated = false;
+
+        // Clear localStorage on refresh token failure
+        localStorage.removeItem("token");
+        localStorage.removeItem("refreshToken");
+      })
+
+      // Get User Profile
+      .addCase(getUserProfile.pending, (state) => {
+        state.status = "loading";
+      })
+      .addCase(getUserProfile.fulfilled, (state, action) => {
+        state.status = "succeeded";
+        state.user = action.payload;
+      })
+      .addCase(getUserProfile.rejected, (state, action) => {
+        state.status = "failed";
+        state.error = action.payload as string;
+        // If profile fetch fails, it might be due to expired token
+        if (action.error.message?.includes("Sesión expirada")) {
+          state.token = null;
+          state.refreshToken = null;
+          state.isAuthenticated = false;
+          state.user = null;
+          localStorage.removeItem("token");
+          localStorage.removeItem("refreshToken");
+        }
+      })
+
+      // Logout
+      .addCase(logoutUser.fulfilled, (state) => {
+        state.user = null;
+        state.token = null;
+        state.refreshToken = null;
+        state.isAuthenticated = false;
+        state.status = "idle";
+        state.error = null;
+        localStorage.removeItem("token");
+        localStorage.removeItem("refreshToken");
       });
   },
 });
 
-export const { logout } = authSlice.actions;
+export const { loginSuccess, logout, clearAuthError } = authSlice.actions;
 export default authSlice.reducer;
