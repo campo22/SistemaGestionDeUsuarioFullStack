@@ -1,38 +1,27 @@
 import axios from "axios";
-import { store } from "../app/store";
-import { refreshTokenThunk } from "../features/auth/authSlice";
+import { store } from "../store";
+import { refreshTokenThunk } from "../../features/auth/authSlice";
 
-// URL base de la API
-const API_URL = "http://localhost:1010";
-
-// Crear una instancia de Axios con la configuración correcta
+// Crea una instancia de Axios
 const api = axios.create({
-  baseURL: API_URL,
+  baseURL: "http://localhost:1010", // Asegúrate de que esta es la URL correcta de tu API
   headers: {
-    'Accept': 'application/json',
-    'Content-Type': 'application/json'
-  }
+    Accept: "application/json",
+    "Content-Type": "application/json",
+  },
 });
 
-// Interceptor para añadir el token a todas las peticiones
+// Interceptor para añadir el token a todas las peticiones como query param
 api.interceptors.request.use(
   (config) => {
-    console.log(`Enviando petición a: ${config.url}`);
-    
     const token = localStorage.getItem("token");
     if (token) {
-      // Añadir token como parámetro de consulta
-      config.params = config.params || {};
-      config.params.token = token;
-      
-      // También mantener el header por compatibilidad
+      // También mantener el header por si acaso
       config.headers["Authorization"] = `Bearer ${token}`;
     }
-    
     return config;
   },
   (error) => {
-    console.error("Error en la petición:", error);
     return Promise.reject(error);
   }
 );
@@ -55,23 +44,11 @@ const processQueue = (error: any, token: string | null = null) => {
   failedQueue = [];
 };
 
-// Interceptor para manejar respuestas y refresh token
+// Interceptor para manejar errores y refresh token
 api.interceptors.response.use(
-  (response) => {
-    console.log(`Respuesta exitosa de: ${response.config.url}`);
-    return response;
-  },
+  (response) => response,
   async (error) => {
-    if (error.response) {
-      console.error(`Error ${error.response.status} en: ${error.config?.url}`, error.response.data);
-    } else {
-      console.error(`Error en: ${error.config?.url}`, error.message);
-    }
-
     const originalRequest = error.config;
-    if (!originalRequest) {
-      return Promise.reject(error);
-    }
 
     // Si es 401 y no es el endpoint de refresh
     if (
@@ -103,13 +80,11 @@ api.interceptors.response.use(
       }
 
       try {
-        console.log("Intentando refrescar token...");
         // Despacha el thunk y espera el resultado
         const resultAction = await store.dispatch(
           refreshTokenThunk(refreshToken)
         );
         if (refreshTokenThunk.fulfilled.match(resultAction)) {
-          console.log("Token refrescado exitosamente");
           const newToken = resultAction.payload.token;
           // Actualizar el token en la petición original
           originalRequest.params = originalRequest.params || {};
@@ -117,12 +92,10 @@ api.interceptors.response.use(
           processQueue(null, newToken);
           return api(originalRequest);
         } else {
-          console.error("Error al refrescar token:", resultAction.payload);
           processQueue(resultAction.payload, null);
           return Promise.reject(resultAction.payload);
         }
       } catch (err) {
-        console.error("Error al refrescar token:", err);
         processQueue(err, null);
         return Promise.reject(err);
       } finally {
@@ -133,25 +106,5 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
-
-// Función para probar una petición directa sin interceptores
-export const testDirectRequest = async (endpoint: string) => {
-  try {
-    const token = localStorage.getItem("token");
-    const response = await axios.get(
-      `${API_URL}${endpoint}?token=${token}`,
-      {
-        headers: {
-          Accept: "application/json",
-        },
-      }
-    );
-    console.log(`Respuesta directa de ${endpoint}:`, response.data);
-    return response.data;
-  } catch (error) {
-    console.error(`Error en petición directa a ${endpoint}:`, error);
-    throw error;
-  }
-};
 
 export default api;
