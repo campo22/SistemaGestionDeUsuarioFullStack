@@ -8,11 +8,11 @@
 
 | Backend ⚙️ | Frontend 💻 |
 |------------|--------------|
-| Java + Spring Boot | React + Vite (o CRA) |
+| Java + Spring Boot | React + Vite  |
 | Spring Security + JWT | React Router DOM |
-| JPA + Hibernate | TailwindCSS / Bootstrap |
+| JPA + Hibernate | TailwindCSS  |
 | MySQL / PostgreSQL | Axios |
-| Maven | Context API / Redux (opcional) |
+| Maven |   Redux  |
 
 ---
 
