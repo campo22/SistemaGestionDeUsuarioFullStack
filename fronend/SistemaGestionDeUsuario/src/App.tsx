@@ -1,4 +1,3 @@
-import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -14,13 +13,14 @@ import { Login } from './features/auth/components/Login';
 import RegisterForm from './features/auth/components/RegisterForm';
 import { Dashboard } from './pages/Dashboard';
 import Navbar from './components/Navbar';
-import ProtectedRoute from './components/ProtectedRoute';
+import ProtectedRoute from './routes/ProtectedRoute';
 import Unauthorized from './pages/Unauthorized';
 import UserProfile from './features/users/components/UserProfile';
+import { useEffect } from 'react';
 
 function App() {
   const dispatch = useAppDispatch();
-  const { isAuthenticated, status, error } = useAppSelector(state => state.auth);
+  const { isAuthenticated, error } = useAppSelector(state => state.auth);
 
   // Intentar cargar el perfil del usuario si hay token
   useEffect(() => {
@@ -50,7 +50,7 @@ function App() {
         <HtmlExtractor />
       </div>
 
-      <div className="min-h-screen bg-gray-50 pt-16">
+      <div className="min-h-screen pt-16 bg-gray-50">
         <Routes>
           {/* Rutas públicas */}
           <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to="/dashboard" />} />
@@ -58,7 +58,7 @@ function App() {
           <Route path="/unauthorized" element={<Unauthorized />} />
 
           {/* Rutas protegidas */}
-          <Route element={<ProtectedRoute />}>
+          <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/profile" element={<UserProfile />} />
             {/* Otras rutas protegidas */}

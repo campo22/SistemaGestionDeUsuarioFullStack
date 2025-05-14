@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useAppDispatch, useAppSelector } from "../../../app/hooks";
-import { registerUser, clearAuthError } from "../authSlice";
+import { registerUser } from "../authSlice";
 
 
 const RegisterForm = () => {
@@ -38,7 +38,7 @@ const RegisterForm = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         try {
             await dispatch(registerUser(formData)).unwrap();
             toast.success('Registro exitoso. Ahora puedes iniciar sesión.');
@@ -49,16 +49,16 @@ const RegisterForm = () => {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-            <div className="max-w-md w-full space-y-8">
+        <div className="flex items-center justify-center min-h-screen px-4 py-12 bg-gray-50 sm:px-6 lg:px-8">
+            <div className="w-full max-w-md space-y-8">
                 <div>
-                    <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+                    <h2 className="mt-6 text-3xl font-extrabold text-center text-gray-900">
                         Crear una cuenta
                     </h2>
                 </div>
-                
+
                 <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-                    <div className="rounded-md shadow-sm -space-y-px">
+                    <div className="-space-y-px rounded-md shadow-sm">
                         <div>
                             <label htmlFor="name" className="sr-only">Nombre</label>
                             <input
@@ -66,7 +66,7 @@ const RegisterForm = () => {
                                 name="name"
                                 type="text"
                                 required
-                                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                                className="relative block w-full px-3 py-2 text-gray-900 placeholder-gray-500 border border-gray-300 rounded-none appearance-none rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
                                 placeholder="Nombre"
                                 value={formData.name}
                                 onChange={handleChange}
@@ -79,7 +79,7 @@ const RegisterForm = () => {
                                 name="email"
                                 type="email"
                                 required
-                                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                                className="relative block w-full px-3 py-2 text-gray-900 placeholder-gray-500 border border-gray-300 rounded-none appearance-none focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
                                 placeholder="Email"
                                 value={formData.email}
                                 onChange={handleChange}
@@ -92,7 +92,7 @@ const RegisterForm = () => {
                                 name="password"
                                 type="password"
                                 required
-                                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                                className="relative block w-full px-3 py-2 text-gray-900 placeholder-gray-500 border border-gray-300 rounded-none appearance-none focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
                                 placeholder="Contraseña"
                                 value={formData.password}
                                 onChange={handleChange}
@@ -105,7 +105,7 @@ const RegisterForm = () => {
                                 name="city"
                                 type="text"
                                 required
-                                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                                className="relative block w-full px-3 py-2 text-gray-900 placeholder-gray-500 border border-gray-300 rounded-none appearance-none rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
                                 placeholder="Ciudad"
                                 value={formData.city}
                                 onChange={handleChange}
@@ -114,7 +114,7 @@ const RegisterForm = () => {
                     </div>
 
                     {error && (
-                        <div className="text-red-600 text-sm">
+                        <div className="text-sm text-red-600">
                             {error}
                         </div>
                     )}
@@ -123,12 +123,12 @@ const RegisterForm = () => {
                         <button
                             type="submit"
                             disabled={status === "loading"}
-                            className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                            className="relative flex justify-center w-full px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md group hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                         >
                             {status === "loading" ? "Registrando..." : "Registrarse"}
                         </button>
                     </div>
-                    
+
                     <div className="text-sm text-center">
                         <p>
                             ¿Ya tienes una cuenta?{' '}
