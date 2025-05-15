@@ -2,47 +2,30 @@ package com.diver.usermanagementsystem.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.web.filter.CorsFilter;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
 public class CorsConfig {
+    // Aquí puedes configurar CORS si es necesario
+    // Por ejemplo, puedes permitir solicitudes de ciertos orígenes, métodos, etc.
+    // Si no necesitas configuraciones específicas, puedes dejarlo vacío o eliminar esta clase.
 
-    /**
-     * Configuración CORS para permitir solicitudes desde el frontend
-     */
+    // Este metodo permite todas las solicitudes CORS desde cualquier origen
     @Bean
     public WebMvcConfigurer webMvcConfigurer() {
         return new WebMvcConfigurer() {
+
             @Override
             public void addCorsMappings(CorsRegistry registry) {
                 registry
-                        .addMapping("/**") // Permitir todas las rutas
-                        .allowedOrigins("http://localhost:5173") // Origen del frontend
-                        .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-                        .allowedHeaders("Authorization", "Content-Type", "Accept")
-                        .allowCredentials(true);
+                        .addMapping("/**")
+                        .allowedOrigins("http://localhost:3000", "https://miappfrontend.com") // Limitar los orígenes
+                        .allowedMethods("GET", "POST", "PUT", "DELETE") // Métodos más específicos
+                        .allowedHeaders("Authorization", "Content-Type") // Solo los encabezados que necesitas
+                        .allowCredentials(true); // Permite el envío de cookies (si necesario)
             }
         };
     }
 
-    /**
-     * Filtro CORS global para asegurar que todas las solicitudes pasen por la configuración CORS
-     */
-    @Bean
-    public CorsFilter corsFilter() {
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        CorsConfiguration config = new CorsConfiguration();
-
-        config.setAllowCredentials(true);
-        config.addAllowedOrigin("http://localhost:5173"); // Origen del frontend
-        config.addAllowedHeader("*");
-        config.addAllowedMethod("*");
-
-        source.registerCorsConfiguration("/**", config);
-        return new CorsFilter(source);
-    }
 }

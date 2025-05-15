@@ -1,244 +1,114 @@
-import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { ReqRes } from "./types";
-import authService from "./services/authService";
+// Importamos la función de login que se comunica con la API
+import { login } from "../../api/auth";
 
+// Importamos el tipo de respuesta que esperamos desde la API
+import { ReqRes } from "./types";
+
+// Importamos funciones y tipos desde Redux Toolkit
+import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
+
+/**
+ * Definimos la interfaz que representa el estado del slice de autenticación.
+ */
 interface AuthState {
-  user: ReqRes["ourUsers"] | null;
-  token: string | null;
-  refreshToken: string | null;
-  isAuthenticated: boolean;
-  status: "idle" | "loading" | "succeeded" | "failed";
-  error: string | null;
+  user: ReqRes["ourUsers"] | null; // Datos del usuario logueado
+  token: string | null; // Token de autenticación JWT
+  status: "loading" | "succeeded" | "failed" | "idle"; // Estado del proceso de login
+  error: string | null; // Mensaje de error (si ocurre)
 }
 
+/**
+ * Estado inicial del slice de autenticación.
+ */
 const initialState: AuthState = {
   user: null,
-  token: localStorage.getItem("token"),
-  refreshToken: localStorage.getItem("refreshToken"),
-  isAuthenticated: !!localStorage.getItem("token"),
+  token: null,
   status: "idle",
   error: null,
 };
 
-// authSlice.ts
-// Thunks
+/**
+ * Acción asincrónica para iniciar sesión (login).
+ * Utilizamos `createAsyncThunk` para manejar:
+ * - `pending`  → cuando se inicia la petición
+ * - `fulfilled` → cuando la petición fue exitosa
+ * - `rejected`  → cuando ocurrió un error
+ */
 export const loginUser = createAsyncThunk(
-  "auth/login",
+  "auth/login", // Nombre único para identificar la acción
   async (
-    credentials: { email: string; password: string },
-    { rejectWithValue, dispatch }
+    credencials: { email: string; password: string }, // Credenciales de inicio de sesión
+    { rejectWithValue } // Método para retornar errores personalizados
   ) => {
     try {
-      const response = await authService.login(credentials);
-      // After login, get user profile
-      dispatch(getUserProfile());
+      // Llamamos a la API con las credenciales
+      const response = await login(credencials);
+
+      // Guardamos el token en localStorage para mantener la sesión
+      localStorage.setItem("token", response.token || "");
+
+      // Retornamos la respuesta para manejarla en el slice
       return response;
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.error || "Login fallido");
-    }
-  }
-);
-
-export const registerUser = createAsyncThunk(
-  "auth/register",
-  async (
-    userData: { name: string; email: string; password: string; city: string },
-    { rejectWithValue }
-  ) => {
-    try {
-      return await authService.register(userData);
-    } catch (error: any) {
+      // En caso de error, lo enviamos al `rejected` del extraReducer
       return rejectWithValue(
-        error.response?.data?.error || "Error en el registro"
+        error.response?.data?.error || "Error de autenticación"
       );
     }
   }
 );
 
-export const refreshTokenThunk = createAsyncThunk(
-  "auth/refreshToken",
-  async (refreshTokenArg: string, { rejectWithValue }) => {
-    try {
-      const response = await authService.refreshToken(refreshTokenArg);
-
-      if (!response.token) {
-        return rejectWithValue("No hay refresh token disponible");
-      }
-
-      return response;
-    } catch (error: any) {
-      return rejectWithValue(
-        error.response?.data?.error || "Error al refrescar sesión"
-      );
-    }
-  }
-);
-
-export const getUserProfile = createAsyncThunk(
-  "auth/getUserProfile",
-  async (_, { rejectWithValue }) => {
-    try {
-      return await authService.getUserProfile();
-    } catch (error: any) {
-      return rejectWithValue(
-        error.response?.data?.error || "Error al obtener perfil de usuario"
-      );
-    }
-  }
-);
-
-export const logoutUser = createAsyncThunk("auth/logout", async () => {
-  await authService.logout();
-});
-
+/**
+ * Slice de autenticación.
+ * Aquí definimos el nombre, el estado inicial, las acciones sincrónicas (reducers)
+ * y cómo se manejan las acciones asincrónicas (extraReducers).
+ */
 const authSlice = createSlice({
-  name: "auth",
-  initialState,
-  reducers: {
-    loginSuccess: (
-      state,
-      action: PayloadAction<{
-        token: string;
-        refreshToken?: string;
-        user?: ReqRes["ourUsers"];
-      }>
-    ) => {
-      state.token = action.payload.token;
-      state.refreshToken = action.payload.refreshToken || null;
-      state.user = action.payload.user || null;
-      state.status = "succeeded";
-      state.error = null;
+  name: "auth", // Nombre del slice
+  initialState, // Estado inicial definido arriba
 
-      // Store tokens in localStorage
-      localStorage.setItem("token", action.payload.token);
-      if (action.payload.refreshToken) {
-        localStorage.setItem("refreshToken", action.payload.refreshToken);
-      }
-    },
+  reducers: {
+    /**
+     * Acción sincrónica para cerrar sesión (logout).
+     * Limpia el estado de usuario y token, y elimina el token de localStorage.
+     */
     logout: (state) => {
       state.user = null;
       state.token = null;
-      state.refreshToken = null;
-      state.isAuthenticated = false;
-
-      // Clear localStorage
       localStorage.removeItem("token");
-      localStorage.removeItem("refreshToken");
-    },
-    clearAuthError: (state) => {
-      state.error = null;
     },
   },
+
+  /**
+   * Manejadores de estados para la acción asincrónica `loginUser`.
+   */
   extraReducers: (builder) => {
     builder
-      // Login
+      // Mientras se está realizando la petición de login
       .addCase(loginUser.pending, (state) => {
         state.status = "loading";
-        state.error = null;
       })
-      .addCase(loginUser.fulfilled, (state, action) => {
+      // Cuando la petición fue exitosa
+      .addCase(loginUser.fulfilled, (state, action: PayloadAction<ReqRes>) => {
         state.status = "succeeded";
         state.user = action.payload.ourUsers || null;
         state.token = action.payload.token || null;
-        state.refreshToken = action.payload.refreshToken || null;
-        state.isAuthenticated = true;
-        state.error = null;
-
-        // Store tokens in localStorage
-        if (action.payload.token) {
-          localStorage.setItem("token", action.payload.token);
-        }
-        if (action.payload.refreshToken) {
-          localStorage.setItem("refreshToken", action.payload.refreshToken);
-        }
       })
+      // Cuando ocurre un error en la petición
       .addCase(loginUser.rejected, (state, action) => {
         state.status = "failed";
         state.error = action.payload as string;
-      })
-
-      // Register
-      .addCase(registerUser.pending, (state) => {
-        state.status = "loading";
-        state.error = null;
-      })
-      .addCase(registerUser.fulfilled, (state) => {
-        state.status = "succeeded";
-        state.error = null;
-      })
-      .addCase(registerUser.rejected, (state, action) => {
-        state.status = "failed";
-        state.error = action.payload as string;
-      })
-
-      // Refresh Token
-      .addCase(refreshTokenThunk.pending, (state) => {
-        state.status = "loading";
-        state.error = null;
-      })
-      .addCase(refreshTokenThunk.fulfilled, (state, action) => {
-        state.status = "succeeded";
-        state.token = action.payload.token || null;
-        state.refreshToken = action.payload.refreshToken || null;
-        state.user = action.payload.ourUsers || null;
-        state.error = null;
-
-        // Store tokens in localStorage
-        if (action.payload.token) {
-          localStorage.setItem("token", action.payload.token);
-        }
-        if (action.payload.refreshToken) {
-          localStorage.setItem("refreshToken", action.payload.refreshToken);
-        }
-      })
-      .addCase(refreshTokenThunk.rejected, (state, action) => {
-        state.status = "failed";
-        state.error = action.payload as string;
-        state.user = null;
-        state.token = null;
-        state.refreshToken = null;
-        state.isAuthenticated = false;
-
-        // Clear localStorage on refresh token failure
-        localStorage.removeItem("token");
-        localStorage.removeItem("refreshToken");
-      })
-
-      // Get User Profile
-      .addCase(getUserProfile.pending, (state) => {
-        state.status = "loading";
-      })
-      .addCase(getUserProfile.fulfilled, (state, action) => {
-        state.status = "succeeded";
-        state.user = action.payload;
-      })
-      .addCase(getUserProfile.rejected, (state, action) => {
-        state.status = "failed";
-        state.error = action.payload as string;
-        // If profile fetch fails, it might be due to expired token
-        if (action.error.message?.includes("Sesión expirada")) {
-          state.token = null;
-          state.refreshToken = null;
-          state.isAuthenticated = false;
-          state.user = null;
-          localStorage.removeItem("token");
-          localStorage.removeItem("refreshToken");
-        }
-      })
-
-      // Logout
-      .addCase(logoutUser.fulfilled, (state) => {
-        state.user = null;
-        state.token = null;
-        state.refreshToken = null;
-        state.isAuthenticated = false;
-        state.status = "idle";
-        state.error = null;
-        localStorage.removeItem("token");
-        localStorage.removeItem("refreshToken");
       });
   },
 });
 
-export const { loginSuccess, logout, clearAuthError } = authSlice.actions;
+/**
+ * Exportamos la acción `logout` para poder usarla en nuestros componentes
+ * (por ejemplo, para cerrar sesión al hacer clic en un botón).
+ */
+export const { logout } = authSlice.actions;
+
+/**
+ * Exportamos el reducer del slice para integrarlo en el `store` global de Redux.
+ */
 export default authSlice.reducer;
