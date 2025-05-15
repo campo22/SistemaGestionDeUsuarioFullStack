@@ -17,9 +17,11 @@ import java.util.Optional;
 @Service
 public class UserManagementService {
 
+    // Inyectamos el repositorio de usuarios
     @Autowired
     private UsersRepository usersRepository;
 
+    // Inyectamos el codificador de contraseñas
     @Autowired
     private PasswordEncoder passwordEncoder;
 
@@ -29,20 +31,16 @@ public class UserManagementService {
     @Autowired
     private JWTUtils jwtUtils;
 
-    /**
-     * Registra un nuevo usuario en el sistema
-     */
+    // Metodo principal para registrar usuarios
     public ReqRes registerUser(ReqRes registrationRequest) {
         try {
             if (emailExists(registrationRequest.getEmail())) {
                 return errorResponse(400, "El correo electrónico ya está registrado.");
             }
 
-            // Mapeo de los datos del request al modelo OurUsers
             OurUsers userToSave = mapToUser(registrationRequest);
-            userToSave.setRole("USER");
+            userToSave.setRole(registrationRequest.getRole()); // Asignar rol si no lo incluye el mapper
 
-            // Guardar usuario en la base de datos
             OurUsers savedUser = usersRepository.save(userToSave);
 
             if (savedUser.getId() > 0) {
@@ -58,28 +56,29 @@ public class UserManagementService {
         }
     }
 
-    /**
-     * Autentica un usuario y genera token JWT
-     */
     public ReqRes login(ReqRes rep) {
         try {
-            // Verifica las credenciales del usuario
+            // Autenticar con email y contraseña
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(rep.getEmail(), rep.getPassword())
             );
 
+            // Obtener el usuario de la base de datos
             OurUsers user = usersRepository.findByEmail(rep.getEmail()).orElse(null);
 
+            // Verificar si existe (aunque ya lo autenticaste, es por seguridad)
             if (user != null) {
-                // Genera token de acceso y refresh token
+                // Generar el token
                 String token = jwtUtils.generateToken(user);
                 String refreshToken = jwtUtils.generateRefreshToken(new HashMap<>(), user);
 
+                // Armar respuesta exitosa
                 rep.setStatus(200);
                 rep.setMessage("Usuario autenticado con éxito");
                 rep.setToken(token);
                 rep.setRefreshToken(refreshToken);
-                rep.setExpirationToken("1h");
+                rep.setExpirationToken("24h");
+                rep.setMessage("Usuario autenticado con éxito");
 
                 return rep;
             } else {
@@ -92,39 +91,30 @@ public class UserManagementService {
             return errorResponse(500, "Error al iniciar sesión: " + e.getMessage());
         }
     }
-
-    /**
-     * Refresca el token de acceso si el refresh token es válido
-     */
-    public ReqRes refreshToken(ReqRes refresh) {
+    public ReqRes refreshToken( ReqRes refresh) {
         ReqRes res = new ReqRes();
         try {
-            // Validamos con el refreshToken, NO con el accessToken
-            String email = jwtUtils.extractUsername(refresh.getRefreshToken());
-            OurUsers user = usersRepository.findByEmail(email).orElseThrow();
+            String ourEmail= jwtUtils.extractUsername(refresh.getToken());
+            OurUsers users= usersRepository.findByEmail(ourEmail).orElseThrow();
+            if(jwtUtils.isTokenValid(refresh.getToken(), users)) {
+            var jwt= jwtUtils.generateToken(users);
+            res.setStatus(200);
+            res.setToken(jwt);
+            res.setRefreshToken(refresh.getToken());
+            res.setExpirationToken("24h");
+            res.setMessage("Token refrescado con éxito");
 
-            if (jwtUtils.isTokenValid(refresh.getRefreshToken(), user)) {
-                String jwt = jwtUtils.generateToken(user);
-
-                res.setStatus(200);
-                res.setToken(jwt);
-                res.setRefreshToken(refresh.getRefreshToken());
-                res.setExpirationToken("1h"); // o lo que definas
-                res.setMessage("Token refrescado con éxito");
-            } else {
-                return errorResponse(401, "Refresh token inválido o expirado");
             }
+            res.setStatus(200);
+            return res;
 
-        } catch (Exception e) {
-            return errorResponse(500, "Error al refrescar el token: " + e.getMessage());
+        }catch (Exception e) {
+            res.setStatus(500);
+            res.setError("Error al refrescar el token: " + e.getMessage());
+            return res;
         }
-        return res;
     }
-
-
-    /**
-     * Obtiene todos los usuarios
-     */
+    // Metodo para obtener todos los usuarios
     public ReqRes getAllUsers() {
         ReqRes reqRes = new ReqRes();
 
@@ -133,80 +123,79 @@ public class UserManagementService {
             if (!result.isEmpty()) {
                 reqRes.setOurUsersList(result);
                 reqRes.setStatus(200);
-                reqRes.setMessage("Usuarios encontrados exitosamente");
+                reqRes.setMessage("Successful");
             } else {
                 reqRes.setStatus(404);
-                reqRes.setMessage("No se encontraron usuarios");
+                reqRes.setMessage("No users found");
             }
             return reqRes;
         } catch (Exception e) {
-            return errorResponse(500, "Error al obtener usuarios: " + e.getMessage());
+            reqRes.setStatus(500);
+            reqRes.setMessage("Error occurred: " + e.getMessage());
+            return reqRes;
         }
     }
-
-    /**
-     * Obtiene un usuario por su ID
-     */
+    // Metodo para obtener un usuario por ID
     public ReqRes getUserById(Integer id) {
         ReqRes reqRes = new ReqRes();
         try {
             OurUsers userById = usersRepository.findById(id).orElseThrow();
             reqRes.setOurUsers(userById);
             reqRes.setStatus(200);
-            reqRes.setMessage("Usuario con ID " + id + " encontrado exitosamente");
-        } catch (Exception e) {
-            return errorResponse(500, "Error al obtener usuario: " + e.getMessage());
+            reqRes.setMessage("este es el id:"+ id +"  found successfully");
+
+        }catch (Exception e) {
+            reqRes.setStatus(500);
+            reqRes.setMessage("Error occurred: " + e.getMessage());
+
         }
         return reqRes;
     }
 
-    /**
-     * Elimina un usuario por su ID
-     */
     public ReqRes deleteteUserById(Integer id) {
         ReqRes reqRes = new ReqRes();
         try {
-            Optional<OurUsers> userById = usersRepository.findById(id);
-            if (userById.isPresent()) {
+            Optional<OurUsers>userById= usersRepository.findById(id);
+            if(userById.isPresent()){
                 usersRepository.deleteById(id);
                 reqRes.setStatus(200);
                 reqRes.setMessage("Usuario eliminado con éxito");
-            } else {
+            }else{
                 reqRes.setStatus(404);
                 reqRes.setMessage("Usuario no encontrado en la base de datos");
             }
-        } catch (Exception e) {
-            return errorResponse(500, "Error al eliminar el usuario: " + e.getMessage());
+
+        }catch (Exception e) {
+            reqRes.setStatus(500);
+            reqRes.setMessage("Error occurred: " + e.getMessage());
         }
         return reqRes;
     }
-
-    /**
-     * Actualiza un usuario existente
-     */
     public ReqRes updateUser(Integer id, OurUsers updateUser) {
         ReqRes reqRes = new ReqRes();
         try {
             Optional<OurUsers> userById = usersRepository.findById(id);
 
             if (userById.isPresent()) {
+                // Obtener el usuario existente
                 OurUsers existingUser = userById.get();
 
-                // Verifica si el correo ya está en uso por otro usuario
+                // Verificar si el nuevo email ya está en uso por otro usuario
                 if (!existingUser.getEmail().equals(updateUser.getEmail())) {
                     Optional<OurUsers> emailOwner = usersRepository.findByEmail(updateUser.getEmail());
                     if (emailOwner.isPresent() && !emailOwner.get().getId().equals(existingUser.getId())) {
-                        return errorResponse(400, "Este correo ya está en uso por otro usuario.");
+                        reqRes.setStatus(400);
+                        reqRes.setMessage("Este correo ya está en uso por otro usuario.");
+                        return reqRes;
                     }
                 }
 
-                // Actualiza los campos del usuario
+                // Actualizar datos
                 existingUser.setEmail(updateUser.getEmail());
                 existingUser.setName(updateUser.getName());
                 existingUser.setCity(updateUser.getCity());
                 existingUser.setRole(updateUser.getRole());
 
-                // Si se proporciona nueva contraseña, la encripta
                 if (updateUser.getPassword() != null && !updateUser.getPassword().isEmpty()) {
                     existingUser.setPassword(passwordEncoder.encode(updateUser.getPassword()));
                 }
@@ -217,61 +206,55 @@ public class UserManagementService {
                 reqRes.setMessage("Usuario actualizado con éxito");
 
             } else {
-                return errorResponse(404, "Usuario no encontrado en la base de datos");
+                reqRes.setStatus(404);
+                reqRes.setMessage("Usuario no encontrado en la base de datos");
             }
 
         } catch (Exception e) {
-            return errorResponse(500, "Error al actualizar el usuario: " + e.getMessage());
+            reqRes.setStatus(500);
+            reqRes.setMessage("Error al actualizar el usuario: " + e.getMessage());
         }
         return reqRes;
     }
 
-    /**
-     * Obtiene la información de un usuario por su email
-     */
-    public ReqRes getMyInfo(String email) {
+
+    public ReqRes getMyInfo(String email){
         ReqRes reqRes = new ReqRes();
         try {
             Optional<OurUsers> userOptional = usersRepository.findByEmail(email);
             if (userOptional.isPresent()) {
                 reqRes.setOurUsers(userOptional.get());
                 reqRes.setStatus(200);
-                reqRes.setMessage("Información del usuario obtenida exitosamente");
+                reqRes.setMessage("successful");
             } else {
-                return errorResponse(404, "Usuario no encontrado");
+                reqRes.setStatus(404);
+                reqRes.setMessage("User not found for update");
             }
-        } catch (Exception e) {
-            return errorResponse(500, "Error al obtener la información del usuario: " + e.getMessage());
+
+        }catch (Exception e){
+            reqRes.setStatus(500);
+            reqRes.setMessage("Error occurred while getting user info: " + e.getMessage());
         }
         return reqRes;
+
     }
 
-    // ----------------------
-    // Métodos auxiliares
-    // ----------------------
-
-    /**
-     * Verifica si ya existe un usuario con ese correo
-     */
+    // Verifica si ya existe un usuario con el mismo correo
     private boolean emailExists(String email) {
         return usersRepository.findByEmail(email).isPresent();
     }
 
-    /**
-     * Mapea un DTO ReqRes al modelo OurUsers
-     */
+    // Mapea los datos del DTO (ReqRes) a la entidad OurUsers para registrar un nuevo usuario
     private OurUsers mapToUser(ReqRes req) {
         OurUsers user = new OurUsers();
         user.setName(req.getName());
         user.setEmail(req.getEmail());
-        user.setPassword(passwordEncoder.encode(req.getPassword()));
+        user.setPassword(passwordEncoder.encode(req.getPassword())); // Encripta la contraseña
         user.setCity(req.getCity());
         return user;
     }
 
-    /**
-     * Devuelve una respuesta exitosa con mensaje
-     */
+    // Crea una respuesta de éxito con mensaje personalizado
     private ReqRes successResponse(String message) {
         ReqRes res = new ReqRes();
         res.setStatus(200);
@@ -279,9 +262,7 @@ public class UserManagementService {
         return res;
     }
 
-    /**
-     * Devuelve una respuesta de error con estado y mensaje
-     */
+    // Crea una respuesta de error con código de estado y mensaje de error
     private ReqRes errorResponse(int status, String errorMsg) {
         ReqRes res = new ReqRes();
         res.setStatus(status);
